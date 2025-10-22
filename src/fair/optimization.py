@@ -70,7 +70,7 @@ class IntegerLinearProgram:
 
         return self
 
-    def formulateUSW(self, valuations = None):
+    def formulateUSW(self, valuations=None):
         """Put previously compiled constraints into scipy optimization format
 
         Raises:
