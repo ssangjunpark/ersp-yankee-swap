@@ -586,7 +586,7 @@ def serial_dictatorship(
         return X
 
 
-def round_robin(agents: list[BaseAgent], items: list[ScheduleItem]):
+def round_robin(agents: list[BaseAgent], items: list[ScheduleItem], valuations=None):
     """Round Robin allocation algorithm.
 
     In each round, give the playing agent one item they can add to their bundle that give them positive utility, if any
@@ -609,7 +609,13 @@ def round_robin(agents: list[BaseAgent], items: list[ScheduleItem]):
             bundle = get_bundle_from_allocation_matrix(X, items, player)
             for item in desired_items:
                 if X[item, len(agents)] > 0:
-                    current_val = agent.marginal_contribution(bundle, items[item])
+                    if valuations is None:
+                        current_val = agent.marginal_contribution(bundle, items[item])
+                    else:
+                        current_val = (
+                            agent.marginal_contribution(bundle, items[item])
+                            * valuations[player, item]
+                        )
                     if current_val > val:
                         current_item.clear()
                         current_item.append(item)
