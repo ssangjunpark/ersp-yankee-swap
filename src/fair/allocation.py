@@ -366,7 +366,8 @@ def add_agent_to_exchange_graph(
     agents: list[BaseAgent],
     items: list[ScheduleItem],
     agent_picked: int,
-    valuations=None,
+    valuations,
+    weight_factor: float,
 ):
     """Add picked agent to the exchange graph.
 
@@ -396,7 +397,7 @@ def add_agent_to_exchange_graph(
                 exchange_graph.add_edge("s", i, weight=1)
             else:
                 exchange_graph.add_edge(
-                    "s", i, weight=1 - 1e-6 * valuations[agent_picked, i]
+                    "s", i, weight=1 - weight_factor * valuations[agent_picked, i]
                 )
     return exchange_graph
 
@@ -475,7 +476,9 @@ def update_exchange_graph_E(
     items: list[ScheduleItem],
     path_og: list[int],
     agents_involved: list[int],
-    valuations=None,
+    valuations,
+    only_ties,
+    weight_factor: float,
 ):
     """Update the exchange graph and edge matrix after the transfers made.
 
@@ -531,14 +534,17 @@ def update_exchange_graph_E(
                                     reverse=True,
                                 )
                                 first_agent = edge_matrix[item1_idx][item2_idx][0]
-                                weight = 1 - 1e-6 * (
+                                weight = 1 - weight_factor * (
                                     valuations[first_agent, item2_idx]
                                     - valuations[first_agent, item1_idx]
                                 )
                             else:
                                 weight = 1
                             if exchange_graph.has_edge(item1_idx, item2_idx):
-                                exchange_graph[item1_idx][item2_idx]["weight"] = weight
+                                if not only_ties or weight <= 1:
+                                    exchange_graph[item1_idx][item2_idx][
+                                        "weight"
+                                    ] = weight
                             else:
                                 exchange_graph.add_edge(
                                     item1_idx, item2_idx, weight=weight
@@ -774,6 +780,8 @@ def general_yankee_swap_E(
     weights: list = [],
     plot_exchange_graph: bool = False,
     valuations=None,
+    only_ties=False,
+    weight_factor=1e-6,
 ):
     """General Yankee swap allocation algorithm, edge matrix version.
 
@@ -807,7 +815,7 @@ def general_yankee_swap_E(
         count += 1
         agent_picked = np.argmax(gain_vector)
         exchange_graph = add_agent_to_exchange_graph(
-            X, exchange_graph, agents, items, agent_picked, valuations
+            X, exchange_graph, agents, items, agent_picked, valuations, weight_factor
         )
         if plot_exchange_graph:
             nx.draw(exchange_graph, with_labels=True)
@@ -836,6 +844,8 @@ def general_yankee_swap_E(
                 path,
                 agents_involved,
                 valuations,
+                only_ties,
+                weight_factor,
             )
             gain_vector[agent_picked] = get_gain_function(
                 X, agents, items, agent_picked, criteria, weights
