@@ -1,8 +1,10 @@
 import numpy as np
+import copy
 
 from .agent import BaseAgent
 from .metrics import precompute_bundles_valuations
 from .item import ScheduleItem
+from .optimization import StudentAllocationProgram
 
 
 def EF_violations(
@@ -42,6 +44,66 @@ def EF_violations(
             if valuations[j, j] < valuations[j, i]:
                 EF_matrix[j, i] = 1
     return np.sum(EF_matrix > 0), np.sum(np.any(EF_matrix > 0, axis=1))
+
+
+def EF_violations_responses(
+    X: type[np.ndarray],
+    agents: list[BaseAgent],
+    items: list[ScheduleItem],
+    student_status_map: dict,
+    valuations: type[np.ndarray] | None = None,
+):
+    """Compute envy-free violations.
+
+    Compare every agent to all other agents, fill EF_matrix where EF_matrix[i,j]=1 if agent of index i
+    envies agent of index j, 0 otherwise.
+
+    Returns the number of EF violations, and the number of envious agents.
+
+    Args:
+        X (type[np.ndarray]): Allocation matrix
+        agents (list[BaseAgent]): Agents from class BaseAgent
+        schedule (list[ScheduleItem]): Items from class BaseItem
+        valuations (type[np.ndarray]): Valuations of all agents for all bundles under X
+
+    Returns:
+        int: number of EF_violations
+        int: number of envious agents
+    """
+
+    num_agents = len(agents)
+    EF_matrix = np.zeros((num_agents, num_agents))
+    current_utilities = np.diag(np.dot(valuations, X))
+    schedule_copy = copy.deepcopy(items)
+    for agent_idx, agent in enumerate(agents):
+        small_ilp_students = [agent]
+        orig_students = [student.student for student in small_ilp_students]
+        c_small_ilp = np.array([valuations[agent_idx]])
+        for agent2_idx, agent2 in enumerate(agents):
+            if agent_idx == agent2_idx:
+                EF_matrix[agent_idx, agent2_idx] = current_utilities[agent_idx]
+            else:
+                for item_idx, item in enumerate(schedule_copy):
+                    if X[item_idx, agent2_idx] == 1:
+                        item.capacity = 1
+                    else:
+                        item.capacity = 0
+                program = StudentAllocationProgram(
+                    orig_students, schedule_copy
+                ).compile()
+                opt_alloc = program.formulateUSW(
+                    valuations=c_small_ilp.flatten()
+                ).solve()
+                EF_matrix[agent_idx, agent2_idx] = np.dot(c_small_ilp, opt_alloc)
+    return EF_matrix
+
+    # for i in range(len(agents)):
+    #     for j in range(i + 1, len(agents)):
+    #         if valuations[i, i] < valuations[i, j]:
+    #             EF_matrix[i, j] = 1
+    #         if valuations[j, j] < valuations[j, i]:
+    #             EF_matrix[j, i] = 1
+    # return np.sum(EF_matrix > 0), np.sum(np.any(EF_matrix > 0, axis=1))
 
 
 def EF1_violations(
