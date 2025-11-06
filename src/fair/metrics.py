@@ -10,7 +10,10 @@ from .simulation import SubStudent
 
 
 def utilitarian_welfare(
-    X: type[np.ndarray], agents: list[BaseAgent], items: list[ScheduleItem]
+    X: type[np.ndarray],
+    agents: list[BaseAgent],
+    items: list[ScheduleItem],
+    current_utilities: list[int] = None,
 ):
     """Compute utilitarian social welfare (USW)
 
@@ -24,16 +27,22 @@ def utilitarian_welfare(
     Returns:
         float: USW / len(agents)
     """
-    util = 0
-    for agent_index, agent in enumerate(agents):
-        bundle = get_bundle_from_allocation_matrix(X, items, agent_index)
-        val = agent.valuation(bundle)
-        util += val
-    return util / (len(agents))
+    if current_utilities is None:
+        util = 0
+        for agent_index, agent in enumerate(agents):
+            bundle = get_bundle_from_allocation_matrix(X, items, agent_index)
+            val = agent.valuation(bundle)
+            util += val
+        return util / (len(agents))
+    else:
+        return sum(current_utilities) / len(agents)
 
 
 def nash_welfare(
-    X: type[np.ndarray], agents: list[BaseAgent], items: list[ScheduleItem]
+    X: type[np.ndarray],
+    agents: list[BaseAgent],
+    items: list[ScheduleItem],
+    current_utilities: list[int] = None,
 ):
     """Compute Nash social welfare (NSW)
 
@@ -52,8 +61,11 @@ def nash_welfare(
     util = 0
     num_zeros = 0
     for agent_index, agent in enumerate(agents):
-        bundle = get_bundle_from_allocation_matrix(X, items, agent_index)
-        val = agent.valuation(bundle)
+        if current_utilities is None:
+            bundle = get_bundle_from_allocation_matrix(X, items, agent_index)
+            val = agent.valuation(bundle)
+        else:
+            val = current_utilities[agent_index]
         if val == 0:
             num_zeros += 1
         else:
