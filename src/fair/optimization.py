@@ -70,7 +70,7 @@ class IntegerLinearProgram:
 
         return self
 
-    def formulateUSW(self):
+    def formulateUSW(self, valuations=None):
         """Put previously compiled constraints into scipy optimization format
 
         Raises:
@@ -83,7 +83,10 @@ class IntegerLinearProgram:
             raise AttributeError("IntegerLinearProgram must be compiled first")
 
         n, m = self.A.shape
-        self.c = -np.ones((m,))
+        if valuations is None:
+            self.c = -np.ones((m,))
+        else:
+            self.c = -valuations
         self.bounds = scipy.optimize.Bounds(0, 1)
         self.constraint = scipy.optimize.LinearConstraint(
             self.A, ub=self.b.toarray().reshape((n,))
