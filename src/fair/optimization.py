@@ -86,7 +86,7 @@ class IntegerLinearProgram:
         if valuations is None:
             self.c = -np.ones((m,))
         else:
-            self.c = -valuations
+            self.c = -valuations.flatten()
         self.bounds = scipy.optimize.Bounds(0, 1)
         self.constraint = scipy.optimize.LinearConstraint(
             self.A, ub=self.b.toarray().reshape((n,))

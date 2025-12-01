@@ -360,7 +360,7 @@ def integer_linear_program(
 ):
     orig_students = [student.student for student in agents]
     program = StudentAllocationProgram(orig_students, items).compile()
-    opt_alloc = program.formulateUSW(valuations=valuations.flatten()).solve()
+    opt_alloc = program.formulateUSW(valuations=valuations).solve()
     return opt_alloc.reshape(len(agents), len(items)).transpose()
 
 
