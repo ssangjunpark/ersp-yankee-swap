@@ -143,7 +143,73 @@ def get_bundle_indexes_from_allocation_matrix(X: type[np.ndarray], agent_index: 
     return bundle_indexes
 
 
-"""Update allocation after finding the shortest path in exchange graph"""
+"""Yankee swap subroutines"""
+
+
+def add_agent_to_exchange_graph(
+    X: type[np.ndarray],
+    exchange_graph: type[nx.Graph],
+    agents: list[BaseAgent],
+    items: list[ScheduleItem],
+    agent_picked: int,
+    valuations,
+    weight_factor: float,
+):
+    """Add picked agent to the exchange graph.
+
+    Create node representing the agent currently playing, add edges from the node to items that would increase their utility
+
+    Args:
+        X (type[np.ndarray]): allocation matrix
+        exchange_graph (type[nx.Graph]): exchange graph
+        agents (list[BaseAgent]): List of agents from class BaseAgent
+        items (list[ScheduleItem]): List of items from class BaseItem
+        agent_picked (int): index of the agent currently playing
+
+    Returns:
+        exchange_graph (type[nx.Graph]): Updated exchange graph
+    """
+    exchange_graph.add_node("s")
+    bundle = get_bundle_from_allocation_matrix(X, items, agent_picked)
+    agent = agents[agent_picked]
+    for i in agent.get_desired_items_indexes(items):
+        g = items[i]
+        if (
+            g not in bundle
+            and agents[agent_picked].marginal_contribution(bundle, g) == 1
+            and g.capacity > 0
+        ):
+            if valuations is None:
+                exchange_graph.add_edge("s", i, weight=1)
+            else:
+                exchange_graph.add_edge(
+                    "s", i, weight=1 - weight_factor * valuations[agent_picked, i]
+                )
+    return exchange_graph
+
+
+def find_shortest_path(G: type[nx.Graph], start: str, end: str, weight=None):
+    """Find shortest path on exchange graph.
+
+    Find and return shortest path from start to end nodes on graph G. Return False if there is no path
+
+    Args:
+        G (type[nx.Graph]): exchange graph
+        start (str): start node
+        end (str): target node
+
+    Returns:
+        list[int]: list of nodes (item indices) on the shortest path
+        of False: if there is no such path
+    """
+    try:
+        if weight is None:
+            p = nx.shortest_path(G, source=start, target=end)
+        else:
+            p = nx.shortest_path(G, source=start, target=end, weight=weight)
+        return p
+    except:
+        return False
 
 
 def update_allocation_E(
@@ -199,75 +265,6 @@ def update_allocation_E(
         else:
             X[last_item, agent_picked] = 1
     return X, exchange_graph, edge_matrix, agents_involved
-
-
-"""Graph functions for the exchange graph"""
-
-
-def find_shortest_path(G: type[nx.Graph], start: str, end: str, weight=None):
-    """Find shortest path on exchange graph.
-
-    Find and return shortest path from start to end nodes on graph G. Return False if there is no path
-
-    Args:
-        G (type[nx.Graph]): exchange graph
-        start (str): start node
-        end (str): target node
-
-    Returns:
-        list[int]: list of nodes (item indices) on the shortest path
-        of False: if there is no such path
-    """
-    try:
-        if weight is None:
-            p = nx.shortest_path(G, source=start, target=end)
-        else:
-            p = nx.shortest_path(G, source=start, target=end, weight=weight)
-        return p
-    except:
-        return False
-
-
-def add_agent_to_exchange_graph(
-    X: type[np.ndarray],
-    exchange_graph: type[nx.Graph],
-    agents: list[BaseAgent],
-    items: list[ScheduleItem],
-    agent_picked: int,
-    valuations,
-    weight_factor: float,
-):
-    """Add picked agent to the exchange graph.
-
-    Create node representing the agent currently playing, add edges from the node to items that would increase their utility
-
-    Args:
-        X (type[np.ndarray]): allocation matrix
-        exchange_graph (type[nx.Graph]): exchange graph
-        agents (list[BaseAgent]): List of agents from class BaseAgent
-        items (list[ScheduleItem]): List of items from class BaseItem
-        agent_picked (int): index of the agent currently playing
-
-    Returns:
-        exchange_graph (type[nx.Graph]): Updated exchange graph
-    """
-    exchange_graph.add_node("s")
-    bundle = get_bundle_from_allocation_matrix(X, items, agent_picked)
-    agent = agents[agent_picked]
-    for i in agent.get_desired_items_indexes(items):
-        g = items[i]
-        if (
-            g not in bundle
-            and agents[agent_picked].marginal_contribution(bundle, g) == 1
-            and g.capacity > 0
-        ):
-            if valuations is None:
-                exchange_graph.add_edge("s", i, weight=1)
-            else:
-                exchange_graph.add_edge(
-                    "s", i, weight=1 - weight_factor * valuations[agent_picked, i]
-                )
-    return exchange_graph
 
 
 def update_exchange_graph_E(
