@@ -192,7 +192,7 @@ def get_responses_envy_matrix(
 
             program = StudentAllocationProgram(orig_students, schedule_copy).compile()
             opt_alloc = program.formulateUSW(valuations=c_small_ilp.flatten()).solve()
-            value = np.dot(c_small_ilp, opt_alloc)
+            value = np.dot(c_small_ilp, opt_alloc).item()
 
             # Store and assign
             memo[key] = value

@@ -72,6 +72,9 @@ def slot_list(frequency: str):
     Returns:
         List[datetime.Time]: List of times deonting time slots
     """
+    # pandas >= 2.2
+    import re
+    frequency = re.sub(r"(\d*)T\b", r"\1min", frequency)
     return [
         dt.time()
         for dt in pd.date_range("1900/01/01 00:00", "1900/01/02 00:00", freq=frequency)
